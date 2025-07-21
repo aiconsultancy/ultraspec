@@ -1,6 +1,11 @@
 # Ultraspec - Spec-Driven Development for Claude Code
 
-Ultraspec is a comprehensive template for implementing spec-driven development workflows with Claude Code. It provides a structured approach to feature development, ensuring requirements are well-defined, designs are thoughtful, and implementation follows test-driven development practices.
+[![GitHub](https://img.shields.io/github/license/aiconsultancy/ultraspec)](https://github.com/aiconsultancy/ultraspec/blob/main/LICENSE)
+[![Claude Code Compatible](https://img.shields.io/badge/Claude_Code-Compatible-blue)](https://claude.ai/code)
+
+Ultraspec is a comprehensive template for implementing spec-driven development workflows with [Claude Code](https://claude.ai/code). It provides a structured approach to feature development, ensuring requirements are well-defined, designs are thoughtful, and implementation follows test-driven development practices.
+
+**Repository**: [https://github.com/aiconsultancy/ultraspec](https://github.com/aiconsultancy/ultraspec)
 
 ## Features
 
@@ -15,13 +20,39 @@ Ultraspec is a comprehensive template for implementing spec-driven development w
 
 ## Quick Start
 
+### Option 1: Quick Install (Recommended)
+
+#### Super Quick (2 prompts)
 ```bash
-# Clone or download ultraspec
-git clone [ultraspec-repo] ultraspec
+curl -fsSL https://raw.githubusercontent.com/aiconsultancy/ultraspec/main/quick-install.sh | bash
+```
+
+#### With Options
+```bash
+curl -fsSL https://raw.githubusercontent.com/aiconsultancy/ultraspec/main/install.sh | bash -s -- \
+  --name "My App" \
+  --stack node-pnpm \
+  --path ~/projects/myapp
+```
+
+#### Interactive
+```bash
+curl -fsSL https://raw.githubusercontent.com/aiconsultancy/ultraspec/main/install.sh | bash
+```
+
+### Option 2: Manual Installation
+
+```bash
+# Clone ultraspec
+git clone https://github.com/aiconsultancy/ultraspec.git
 
 # Initialize a new project
 ./ultraspec/init-ultraspec.sh ~/projects/myapp --stack node-pnpm --name "My App"
+```
 
+### After Installation
+
+```bash
 # Navigate to your project
 cd ~/projects/myapp
 
@@ -245,6 +276,24 @@ To add new stack templates:
 3. Add `CLAUDE.md.template` with stack guidance
 4. Update `init-ultraspec.sh` with new option
 
+## Contributing
+
+Contributions are welcome! To contribute:
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Submit a pull request
+
+Please ensure your contributions follow the existing patterns and include appropriate documentation.
+
+## Support
+
+For issues, questions, or suggestions:
+- Open an issue on [GitHub](https://github.com/aiconsultancy/ultraspec/issues)
+- Check existing issues for solutions
+- Provide detailed information for bug reports
+
 ## License
 
-[Your license here]# ultraspec
+MIT License - see [LICENSE](LICENSE) file for details
