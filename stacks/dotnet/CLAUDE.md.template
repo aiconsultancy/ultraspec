@@ -1,0 +1,236 @@
+# CLAUDE.md - .NET Project
+
+This file provides guidance to Claude Code when working with code in this repository.
+
+## Project Overview
+
+[PROJECT DESCRIPTION]
+
+### Technology Stack
+- **.NET 8/9** with C#
+- **Database**: [PostgreSQL/SQL Server/SQLite]
+- **ORM**: Entity Framework Core
+- **Architecture**: Clean Architecture
+- **Testing**: xUnit, FluentAssertions
+- **API**: ASP.NET Core Web API
+
+### Project Structure
+```
+src/
+├── Domain/           # Entities, business logic
+├── Application/      # Use cases, interfaces
+├── Infrastructure/   # Data access, external services
+└── Web/             # API endpoints, middleware
+tests/
+├── UnitTests/
+├── IntegrationTests/
+└── ArchitectureTests/
+docs/
+└── specs/           # Spec-driven development
+```
+
+## Essential Commands
+
+```bash
+# Development
+dotnet build
+dotnet run --project src/Web
+dotnet test
+dotnet ef migrations add [Name]
+dotnet ef database update
+
+# Formatting
+dotnet format
+```
+
+Configure post-hook with: `FORMAT_COMMAND="dotnet format"`
+
+## Clean Architecture Principles
+
+### Layer Dependencies
+- **Domain**: No dependencies
+- **Application**: Depends only on Domain
+- **Infrastructure**: Depends on Application
+- **Web**: Depends on Application
+
+### Key Patterns
+- **CQRS**: Separate commands and queries
+- **Repository Pattern**: Abstract data access
+- **Unit of Work**: Transaction management
+- **Domain Events**: Loose coupling
+- **Result Pattern**: Explicit error handling
+
+## C# Coding Standards
+
+### Naming Conventions
+```csharp
+public class CustomerService { }              // PascalCase classes
+public interface ICustomerRepository { }      // I prefix for interfaces
+public async Task<Customer> GetAsync() { }    // Async suffix
+private readonly ILogger _logger;             // Underscore prefix for fields
+public bool IsValid { get; }                  // Boolean properties as questions
+```
+
+### Method Design
+- Keep methods under 20 lines
+- Maximum 3 parameters (use objects for more)
+- Single responsibility
+- Early returns for validation
+
+### Modern C# Features
+```csharp
+// Pattern matching
+return customer switch
+{
+    null => NotFound(),
+    { IsActive: false } => BadRequest("Inactive"),
+    _ => Ok(customer)
+};
+
+// Nullable reference types
+public Customer? FindCustomer(int id);
+
+// Records for DTOs
+public record CustomerDto(int Id, string Name);
+```
+
+## Testing Strategy
+
+### Test Organization
+```
+tests/
+├── UnitTests/
+│   ├── Domain/
+│   └── Application/
+└── IntegrationTests/
+    └── Web/
+```
+
+### xUnit Best Practices
+```csharp
+public class CustomerServiceTests
+{
+    [Fact]
+    public async Task Should_CreateCustomer_When_ValidDataProvided()
+    {
+        // Arrange
+        var command = new CreateCustomerCommand { Name = "Test" };
+        
+        // Act
+        var result = await _handler.Handle(command);
+        
+        // Assert
+        result.Should().BeSuccessful();
+        result.Value.Name.Should().Be("Test");
+    }
+}
+```
+
+### Test Naming
+- `Should_ExpectedBehavior_When_Condition`
+- Group by feature/class under test
+- Use descriptive names
+
+## Entity Framework Patterns
+
+### Entity Configuration
+```csharp
+public class CustomerConfiguration : IEntityTypeConfiguration<Customer>
+{
+    public void Configure(EntityTypeBuilder<Customer> builder)
+    {
+        builder.ToTable("Customers");
+        builder.HasKey(c => c.Id);
+        builder.Property(c => c.Name)
+            .IsRequired()
+            .HasMaxLength(100);
+    }
+}
+```
+
+### Migrations
+```bash
+# Add migration
+dotnet ef migrations add AddCustomerTable -p src/Infrastructure -s src/Web
+
+# Update database
+dotnet ef database update -p src/Infrastructure -s src/Web
+```
+
+## API Design
+
+### RESTful Endpoints
+```csharp
+[ApiController]
+[Route("api/[controller]")]
+public class CustomersController : ControllerBase
+{
+    [HttpGet("{id}")]
+    public async Task<ActionResult<CustomerDto>> Get(int id)
+    {
+        var customer = await _mediator.Send(new GetCustomerQuery(id));
+        return customer.Match<ActionResult>(
+            Ok,
+            NotFound
+        );
+    }
+}
+```
+
+### Error Handling
+- Use `ProblemDetails` for errors
+- Consistent error response format
+- Global exception handler
+- Validation with FluentValidation
+
+## Common Patterns
+
+### CQRS with MediatR
+```csharp
+public class CreateCustomerCommand : IRequest<Result<CustomerDto>>
+{
+    public string Name { get; set; }
+}
+
+public class CreateCustomerHandler : IRequestHandler<CreateCustomerCommand, Result<CustomerDto>>
+{
+    public async Task<Result<CustomerDto>> Handle(CreateCustomerCommand request, CancellationToken cancellationToken)
+    {
+        // Implementation
+    }
+}
+```
+
+### Result Pattern
+```csharp
+public class Result<T>
+{
+    public bool IsSuccess { get; }
+    public T Value { get; }
+    public string Error { get; }
+    
+    public static Result<T> Success(T value) => new(true, value, null);
+    public static Result<T> Failure(string error) => new(false, default, error);
+}
+```
+
+## Performance Considerations
+
+### EF Core Optimization
+- Use `AsNoTracking()` for read-only queries
+- Avoid N+1 queries with `Include()`
+- Use projection with `Select()`
+- Consider raw SQL for complex queries
+
+### Async Best Practices
+- Use `async/await` throughout
+- `ConfigureAwait(false)` in libraries
+- Avoid blocking with `.Result` or `.Wait()`
+
+## Additional .NET-Specific Notes
+
+- Target latest LTS version
+- Enable nullable reference types
+- Use dependency injection extensively
+- Follow Microsoft's coding conventions
+- Use analyzers for code quality

@@ -1,0 +1,560 @@
+# CLAUDE.md - Go Project
+
+This file provides guidance to Claude Code when working with code in this repository.
+
+## Project Overview
+
+[PROJECT DESCRIPTION]
+
+### Technology Stack
+- **Language**: Go 1.21+
+- **Web Framework**: [Standard library / Gin / Echo / Fiber]
+- **Database**: [PostgreSQL with pgx / MySQL / SQLite]
+- **Testing**: Standard testing package + testify
+- **Architecture**: Clean Architecture / Hexagonal
+
+### Project Structure
+```
+cmd/
+├── api/             # Main application entry point
+│   └── main.go
+internal/
+├── domain/          # Business logic and entities
+├── service/         # Use cases / application logic
+├── handler/         # HTTP handlers
+├── repository/      # Data access layer
+└── config/          # Configuration
+pkg/                 # Public packages
+tests/
+├── integration/
+└── e2e/
+docs/
+└── specs/           # Spec-driven development
+```
+
+## Essential Commands
+
+```bash
+# Development (via Makefile)
+make init            # Download dependencies
+make build           # Build binary
+make run             # Run application
+make dev             # Run with hot reload (air)
+make test            # Run tests
+make test-coverage   # Generate coverage report
+make format          # Format code
+make lint            # Run golangci-lint
+
+# Go commands
+go mod tidy          # Clean up dependencies
+go test ./...        # Run all tests
+go build -o app      # Build binary
+```
+
+## Go Best Practices
+
+### Project Layout
+```go
+// Follow standard Go project layout
+// https://github.com/golang-standards/project-layout
+
+// cmd/api/main.go - Application entry point
+package main
+
+import (
+    "log"
+    "myapp/internal/config"
+    "myapp/internal/server"
+)
+
+func main() {
+    cfg := config.Load()
+    srv := server.New(cfg)
+    if err := srv.Start(); err != nil {
+        log.Fatal(err)
+    }
+}
+```
+
+### Error Handling
+```go
+// Define domain errors
+package domain
+
+import "errors"
+
+var (
+    ErrNotFound = errors.New("resource not found")
+    ErrInvalidInput = errors.New("invalid input")
+    ErrUnauthorized = errors.New("unauthorized")
+)
+
+// Wrap errors with context
+func (s *UserService) GetUser(id string) (*User, error) {
+    user, err := s.repo.FindByID(id)
+    if err != nil {
+        return nil, fmt.Errorf("get user %s: %w", id, err)
+    }
+    return user, nil
+}
+
+// Check error types
+if errors.Is(err, domain.ErrNotFound) {
+    return c.JSON(404, map[string]string{"error": "User not found"})
+}
+```
+
+### Clean Architecture
+
+#### Domain Layer
+```go
+// internal/domain/user.go
+package domain
+
+import (
+    "errors"
+    "time"
+)
+
+type User struct {
+    ID        string
+    Email     string
+    Name      string
+    CreatedAt time.Time
+}
+
+func NewUser(email, name string) (*User, error) {
+    if !isValidEmail(email) {
+        return nil, errors.New("invalid email format")
+    }
+    
+    return &User{
+        ID:        generateID(),
+        Email:     email,
+        Name:      name,
+        CreatedAt: time.Now(),
+    }, nil
+}
+
+type UserRepository interface {
+    Save(user *User) error
+    FindByID(id string) (*User, error)
+    FindByEmail(email string) (*User, error)
+}
+```
+
+#### Service Layer
+```go
+// internal/service/user_service.go
+package service
+
+type UserService struct {
+    repo domain.UserRepository
+    log  Logger
+}
+
+func NewUserService(repo domain.UserRepository, log Logger) *UserService {
+    return &UserService{repo: repo, log: log}
+}
+
+func (s *UserService) CreateUser(email, name string) (*domain.User, error) {
+    // Check if user exists
+    existing, _ := s.repo.FindByEmail(email)
+    if existing != nil {
+        return nil, errors.New("email already registered")
+    }
+    
+    // Create new user
+    user, err := domain.NewUser(email, name)
+    if err != nil {
+        return nil, err
+    }
+    
+    // Save to repository
+    if err := s.repo.Save(user); err != nil {
+        s.log.Error("failed to save user", "error", err)
+        return nil, fmt.Errorf("save user: %w", err)
+    }
+    
+    return user, nil
+}
+```
+
+#### Handler Layer
+```go
+// internal/handler/user_handler.go
+package handler
+
+type UserHandler struct {
+    userService *service.UserService
+}
+
+type CreateUserRequest struct {
+    Email string `json:"email" validate:"required,email"`
+    Name  string `json:"name" validate:"required,min=2"`
+}
+
+func (h *UserHandler) CreateUser(c echo.Context) error {
+    var req CreateUserRequest
+    if err := c.Bind(&req); err != nil {
+        return c.JSON(400, map[string]string{"error": "Invalid request"})
+    }
+    
+    if err := c.Validate(req); err != nil {
+        return c.JSON(400, map[string]string{"error": err.Error()})
+    }
+    
+    user, err := h.userService.CreateUser(req.Email, req.Name)
+    if err != nil {
+        return h.handleError(c, err)
+    }
+    
+    return c.JSON(201, user)
+}
+```
+
+## Testing Strategy
+
+### Unit Tests
+```go
+// internal/service/user_service_test.go
+package service_test
+
+import (
+    "testing"
+    "github.com/stretchr/testify/assert"
+    "github.com/stretchr/testify/mock"
+)
+
+type MockUserRepository struct {
+    mock.Mock
+}
+
+func (m *MockUserRepository) FindByEmail(email string) (*domain.User, error) {
+    args := m.Called(email)
+    if args.Get(0) == nil {
+        return nil, args.Error(1)
+    }
+    return args.Get(0).(*domain.User), args.Error(1)
+}
+
+func TestUserService_CreateUser(t *testing.T) {
+    t.Run("should create user successfully", func(t *testing.T) {
+        // Arrange
+        repo := new(MockUserRepository)
+        repo.On("FindByEmail", "test@example.com").Return(nil, nil)
+        repo.On("Save", mock.AnythingOfType("*domain.User")).Return(nil)
+        
+        service := NewUserService(repo, logger)
+        
+        // Act
+        user, err := service.CreateUser("test@example.com", "Test User")
+        
+        // Assert
+        assert.NoError(t, err)
+        assert.NotNil(t, user)
+        assert.Equal(t, "test@example.com", user.Email)
+        repo.AssertExpectations(t)
+    })
+}
+```
+
+### Table-Driven Tests
+```go
+func TestValidateEmail(t *testing.T) {
+    tests := []struct {
+        name  string
+        email string
+        want  bool
+    }{
+        {"valid email", "test@example.com", true},
+        {"missing @", "testexample.com", false},
+        {"missing domain", "test@", false},
+        {"empty string", "", false},
+    }
+    
+    for _, tt := range tests {
+        t.Run(tt.name, func(t *testing.T) {
+            got := isValidEmail(tt.email)
+            assert.Equal(t, tt.want, got)
+        })
+    }
+}
+```
+
+## Database Patterns
+
+### Repository Implementation
+```go
+// internal/repository/user_repository.go
+package repository
+
+import (
+    "database/sql"
+    "myapp/internal/domain"
+)
+
+type PostgresUserRepository struct {
+    db *sql.DB
+}
+
+func NewPostgresUserRepository(db *sql.DB) *PostgresUserRepository {
+    return &PostgresUserRepository{db: db}
+}
+
+func (r *PostgresUserRepository) Save(user *domain.User) error {
+    query := `
+        INSERT INTO users (id, email, name, created_at)
+        VALUES ($1, $2, $3, $4)
+        ON CONFLICT (id) DO UPDATE SET
+            email = EXCLUDED.email,
+            name = EXCLUDED.name
+    `
+    _, err := r.db.Exec(query, user.ID, user.Email, user.Name, user.CreatedAt)
+    return err
+}
+
+func (r *PostgresUserRepository) FindByID(id string) (*domain.User, error) {
+    var user domain.User
+    query := `SELECT id, email, name, created_at FROM users WHERE id = $1`
+    
+    err := r.db.QueryRow(query, id).Scan(
+        &user.ID, &user.Email, &user.Name, &user.CreatedAt,
+    )
+    if err == sql.ErrNoRows {
+        return nil, domain.ErrNotFound
+    }
+    if err != nil {
+        return nil, err
+    }
+    
+    return &user, nil
+}
+```
+
+### Migration Management
+```go
+// Use golang-migrate or similar
+// migrations/001_create_users.up.sql
+CREATE TABLE IF NOT EXISTS users (
+    id VARCHAR(36) PRIMARY KEY,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP NOT NULL
+);
+
+CREATE INDEX idx_users_email ON users(email);
+```
+
+## Configuration Management
+
+### Environment-based Config
+```go
+// internal/config/config.go
+package config
+
+import (
+    "github.com/kelseyhightower/envconfig"
+)
+
+type Config struct {
+    Port        string `envconfig:"PORT" default:"8080"`
+    DatabaseURL string `envconfig:"DATABASE_URL" required:"true"`
+    LogLevel    string `envconfig:"LOG_LEVEL" default:"info"`
+    JWTSecret   string `envconfig:"JWT_SECRET" required:"true"`
+}
+
+func Load() (*Config, error) {
+    var cfg Config
+    if err := envconfig.Process("", &cfg); err != nil {
+        return nil, err
+    }
+    return &cfg, nil
+}
+```
+
+## HTTP Server Setup
+
+### Router Configuration
+```go
+// internal/server/server.go
+package server
+
+func NewRouter(h *handler.Handler) *echo.Echo {
+    e := echo.New()
+    
+    // Middleware
+    e.Use(middleware.Logger())
+    e.Use(middleware.Recover())
+    e.Use(middleware.RequestID())
+    
+    // Routes
+    api := e.Group("/api/v1")
+    
+    // User routes
+    api.POST("/users", h.CreateUser)
+    api.GET("/users/:id", h.GetUser)
+    
+    // Health check
+    e.GET("/health", h.HealthCheck)
+    
+    return e
+}
+```
+
+## Concurrency Patterns
+
+### Worker Pool
+```go
+func ProcessItems(items []Item) error {
+    const numWorkers = 10
+    jobs := make(chan Item, len(items))
+    results := make(chan error, len(items))
+    
+    // Start workers
+    var wg sync.WaitGroup
+    for i := 0; i < numWorkers; i++ {
+        wg.Add(1)
+        go func() {
+            defer wg.Done()
+            for item := range jobs {
+                results <- processItem(item)
+            }
+        }()
+    }
+    
+    // Send jobs
+    for _, item := range items {
+        jobs <- item
+    }
+    close(jobs)
+    
+    // Wait for completion
+    wg.Wait()
+    close(results)
+    
+    // Check for errors
+    for err := range results {
+        if err != nil {
+            return err
+        }
+    }
+    
+    return nil
+}
+```
+
+### Context Usage
+```go
+func (s *Service) DoWork(ctx context.Context) error {
+    // Set timeout
+    ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+    defer cancel()
+    
+    // Check context in loops
+    for _, item := range items {
+        select {
+        case <-ctx.Done():
+            return ctx.Err()
+        default:
+            if err := processItem(ctx, item); err != nil {
+                return err
+            }
+        }
+    }
+    
+    return nil
+}
+```
+
+## Performance Optimization
+
+### Profiling
+```go
+import _ "net/http/pprof"
+
+func main() {
+    // Enable profiling endpoint
+    go func() {
+        log.Println(http.ListenAndServe("localhost:6060", nil))
+    }()
+    
+    // Run application
+    runApp()
+}
+```
+
+### Benchmarking
+```go
+func BenchmarkUserCreation(b *testing.B) {
+    service := setupService()
+    
+    b.ResetTimer()
+    for i := 0; i < b.N; i++ {
+        email := fmt.Sprintf("user%d@example.com", i)
+        _, err := service.CreateUser(email, "Test User")
+        if err != nil {
+            b.Fatal(err)
+        }
+    }
+}
+```
+
+## Common Patterns
+
+### Options Pattern
+```go
+type ServerOption func(*Server)
+
+func WithPort(port string) ServerOption {
+    return func(s *Server) {
+        s.port = port
+    }
+}
+
+func WithLogger(logger Logger) ServerOption {
+    return func(s *Server) {
+        s.logger = logger
+    }
+}
+
+func NewServer(opts ...ServerOption) *Server {
+    s := &Server{
+        port:   "8080",
+        logger: defaultLogger,
+    }
+    
+    for _, opt := range opts {
+        opt(s)
+    }
+    
+    return s
+}
+```
+
+### Graceful Shutdown
+```go
+func main() {
+    srv := &http.Server{Addr: ":8080"}
+    
+    // Start server
+    go func() {
+        if err := srv.ListenAndServe(); err != http.ErrServerClosed {
+            log.Fatal(err)
+        }
+    }()
+    
+    // Wait for interrupt
+    quit := make(chan os.Signal, 1)
+    signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
+    <-quit
+    
+    // Graceful shutdown
+    ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+    defer cancel()
+    
+    if err := srv.Shutdown(ctx); err != nil {
+        log.Fatal(err)
+    }
+}
+```

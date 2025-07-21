@@ -1,0 +1,48 @@
+# Frontend Makefile - to be placed in frontend/Makefile
+# This will be included by the root Makefile
+
+# Override the generic frontend targets
+frontend-init:
+	@echo "Initializing frontend..."
+	@cd frontend && [PACKAGE_MANAGER] install
+
+frontend-build:
+	@echo "Building frontend..."
+	@cd frontend && [PACKAGE_MANAGER] run build
+
+frontend-test:
+	@echo "Testing frontend..."
+	@cd frontend && [PACKAGE_MANAGER] test
+
+frontend-format:
+	@echo "Formatting frontend..."
+	@cd frontend && [PACKAGE_MANAGER] run format
+
+frontend-lint:
+	@echo "Linting frontend..."
+	@cd frontend && [PACKAGE_MANAGER] run lint
+
+frontend-clean:
+	@echo "Cleaning frontend..."
+	@cd frontend && rm -rf dist build node_modules coverage
+
+frontend-run:
+	@echo "Running frontend..."
+	@cd frontend && [PACKAGE_MANAGER] run preview
+
+frontend-dev:
+	@echo "Starting frontend dev server..."
+	@cd frontend && [PACKAGE_MANAGER] run dev
+
+# Additional frontend-specific targets
+frontend-test-watch:
+	@cd frontend && [PACKAGE_MANAGER] run test:watch
+
+frontend-test-e2e:
+	@cd frontend && [PACKAGE_MANAGER] run test:e2e
+
+frontend-typecheck:
+	@cd frontend && [PACKAGE_MANAGER] run typecheck
+
+frontend-analyze:
+	@cd frontend && [PACKAGE_MANAGER] run build -- --analyze

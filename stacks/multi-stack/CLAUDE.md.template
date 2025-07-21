@@ -1,0 +1,291 @@
+# CLAUDE.md - Multi-Stack Project
+
+This file provides guidance to Claude Code when working with code in this repository.
+
+## Project Overview
+
+[PROJECT DESCRIPTION]
+
+### Technology Stack
+
+#### Frontend
+- **Framework**: [React/Vue/Angular/Svelte]
+- **Language**: TypeScript
+- **Build Tool**: [Vite/Webpack/Parcel]
+- **Package Manager**: [pnpm/npm/yarn/bun]
+- **Testing**: [Vitest/Jest/Playwright]
+
+#### Backend
+- **Framework**: [Express/NestJS/.NET/Go/Django]
+- **Language**: [TypeScript/C#/Go/Python]
+- **Database**: [PostgreSQL/MySQL/MongoDB]
+- **ORM/Query Builder**: [Prisma/TypeORM/EF Core/GORM]
+- **Testing**: [Framework-specific]
+
+### Project Structure
+```
+frontend/
+├── src/
+│   ├── components/      # UI components
+│   ├── pages/          # Page components
+│   ├── services/       # API clients
+│   ├── hooks/          # Custom hooks
+│   └── utils/          # Utilities
+├── tests/
+└── Makefile            # Frontend-specific commands
+
+backend/
+├── src/
+│   ├── controllers/    # Route handlers
+│   ├── services/       # Business logic
+│   ├── models/         # Data models
+│   ├── middleware/     # Custom middleware
+│   └── utils/          # Utilities
+├── tests/
+└── Makefile            # Backend-specific commands
+
+docs/
+└── specs/              # Spec-driven development
+
+Makefile                # Root orchestration
+docker-compose.yml      # Local development services
+```
+
+## Essential Commands
+
+All commands work from the root directory:
+
+```bash
+# Unified commands (runs for both stacks)
+make init       # Initialize both frontend and backend
+make build      # Build both stacks
+make test       # Run all tests
+make format     # Format all code
+make lint       # Lint all code
+make dev        # Start both in dev mode
+make clean      # Clean all artifacts
+
+# Stack-specific commands
+make frontend-dev     # Start only frontend dev server
+make backend-dev      # Start only backend dev server
+make frontend-test    # Run only frontend tests
+make backend-test     # Run only backend tests
+
+# Multi-stack specific
+make services-up      # Start docker services (DB, Redis, etc.)
+make services-down    # Stop docker services
+make test-integration # Run full integration tests
+```
+
+## Development Workflow
+
+### Starting Development
+```bash
+# First time setup
+make init
+make services-up
+
+# Start development
+make dev  # Starts both frontend and backend
+
+# Or run separately in different terminals
+make frontend-dev
+make backend-dev
+```
+
+### API Communication
+
+#### Frontend API Client
+```typescript
+// frontend/src/services/api.ts
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+
+export const api = {
+  async get<T>(path: string): Promise<T> {
+    const response = await fetch(`${API_BASE}${path}`, {
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+    
+    if (!response.ok) {
+      throw new ApiError(response.status, await response.text());
+    }
+    
+    return response.json();
+  },
+  
+  // Similar methods for post, put, delete
+};
+```
+
+#### Backend CORS Configuration
+```typescript
+// backend/src/middleware/cors.ts
+app.use(cors({
+  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  credentials: true,
+}));
+```
+
+### Shared Types
+
+Consider sharing types between frontend and backend:
+
+```
+shared/
+└── types/
+    ├── user.ts      # User type definitions
+    ├── api.ts       # API request/response types
+    └── index.ts     # Export all types
+```
+
+Reference in both `tsconfig.json` files:
+```json
+{
+  "compilerOptions": {
+    "paths": {
+      "@shared/*": ["../shared/*"]
+    }
+  }
+}
+```
+
+## Testing Strategy
+
+### Frontend Testing
+- **Unit Tests**: Components and hooks
+- **Integration Tests**: Page-level testing
+- **E2E Tests**: Full user flows with Playwright/Cypress
+
+### Backend Testing
+- **Unit Tests**: Services and utilities
+- **Integration Tests**: API endpoints with test database
+- **E2E Tests**: Full API flows
+
+### Full-Stack Integration Tests
+```bash
+make test-integration  # Runs both stacks with test data
+```
+
+## Environment Configuration
+
+### Frontend (.env)
+```env
+VITE_API_URL=http://localhost:3001
+VITE_APP_NAME=My App
+```
+
+### Backend (.env)
+```env
+PORT=3001
+DATABASE_URL=postgresql://user:pass@localhost:5432/myapp
+FRONTEND_URL=http://localhost:3000
+JWT_SECRET=your-secret-key
+```
+
+### Docker Services (docker-compose.yml)
+```yaml
+version: '3.8'
+services:
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: myapp
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: pass
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+
+volumes:
+  postgres_data:
+```
+
+## API Design Guidelines
+
+### RESTful Endpoints
+- Frontend expects consistent API responses
+- Use proper HTTP status codes
+- Include CORS headers for local development
+
+### Response Format
+```typescript
+// Success response
+{
+  "data": { /* actual data */ },
+  "meta": { /* pagination, etc. */ }
+}
+
+// Error response
+{
+  "error": {
+    "message": "Human readable message",
+    "code": "ERROR_CODE",
+    "details": { /* additional context */ }
+  }
+}
+```
+
+## Deployment Considerations
+
+### Frontend
+- Build static assets: `make frontend-build`
+- Deploy to CDN or static hosting
+- Configure API URL for production
+
+### Backend
+- Build application: `make backend-build`
+- Run migrations: `make backend-migrate`
+- Deploy to cloud provider
+- Configure environment variables
+
+## Development Best Practices
+
+1. **API-First Design**: Define API contracts in specs
+2. **Type Safety**: Share types between frontend and backend
+3. **Consistent Errors**: Use same error format across stack
+4. **Environment Parity**: Keep dev/staging/prod similar
+5. **Independent Development**: Each stack can run standalone
+
+## Debugging
+
+### Frontend Debugging
+- Browser DevTools for UI issues
+- Network tab for API calls
+- React/Vue DevTools extensions
+
+### Backend Debugging
+- Use debugger with VS Code
+- Log API requests/responses
+- Monitor with `make services-logs`
+
+### Cross-Stack Debugging
+- Check CORS configuration
+- Verify API URLs in environment
+- Use browser network tab to trace requests
+- Check docker services are running
+
+## Common Issues
+
+### CORS Errors
+- Ensure backend allows frontend origin
+- Check credentials are included in requests
+- Verify headers are set correctly
+
+### API Connection Failed
+- Check backend is running on correct port
+- Verify frontend API URL configuration
+- Ensure docker services are up
+
+### Type Mismatches
+- Keep shared types synchronized
+- Run type checking in both stacks
+- Use strict TypeScript settings

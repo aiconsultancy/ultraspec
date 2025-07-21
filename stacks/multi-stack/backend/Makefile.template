@@ -1,0 +1,48 @@
+# Backend Makefile - to be placed in backend/Makefile
+# This will be included by the root Makefile
+
+# Override the generic backend targets
+backend-init:
+	@echo "Initializing backend..."
+	@cd backend && [INIT_COMMAND]
+
+backend-build:
+	@echo "Building backend..."
+	@cd backend && [BUILD_COMMAND]
+
+backend-test:
+	@echo "Testing backend..."
+	@cd backend && [TEST_COMMAND]
+
+backend-format:
+	@echo "Formatting backend..."
+	@cd backend && [FORMAT_COMMAND]
+
+backend-lint:
+	@echo "Linting backend..."
+	@cd backend && [LINT_COMMAND]
+
+backend-clean:
+	@echo "Cleaning backend..."
+	@cd backend && [CLEAN_COMMAND]
+
+backend-run:
+	@echo "Running backend..."
+	@cd backend && [RUN_COMMAND]
+
+backend-dev:
+	@echo "Starting backend dev server..."
+	@cd backend && [DEV_COMMAND]
+
+# Additional backend-specific targets
+backend-test-unit:
+	@cd backend && [TEST_UNIT_COMMAND]
+
+backend-test-integration:
+	@cd backend && [TEST_INTEGRATION_COMMAND]
+
+backend-migrate:
+	@cd backend && [MIGRATE_COMMAND]
+
+backend-db-seed:
+	@cd backend && [SEED_COMMAND]

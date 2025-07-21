@@ -1,0 +1,358 @@
+# CLAUDE.md - Node.js + pnpm Project
+
+This file provides guidance to Claude Code when working with code in this repository.
+
+## Project Overview
+
+[PROJECT DESCRIPTION]
+
+### Technology Stack
+- **Runtime**: Node.js 20+ LTS
+- **Package Manager**: pnpm
+- **Language**: TypeScript
+- **Framework**: [Express/Fastify/NestJS/Next.js]
+- **Testing**: Vitest/Jest
+- **Linting**: ESLint + Prettier
+
+### Project Structure
+```
+src/
+├── controllers/     # Route handlers
+├── services/        # Business logic
+├── models/          # Data models
+├── utils/           # Utilities
+└── types/           # TypeScript types
+tests/
+├── unit/
+├── integration/
+└── e2e/
+docs/
+└── specs/           # Spec-driven development
+```
+
+## Essential Commands
+
+```bash
+# Development
+pnpm install         # Install dependencies
+pnpm dev            # Start dev server
+pnpm build          # Build for production
+pnpm test           # Run tests
+pnpm test:watch     # Watch mode
+pnpm lint           # Run linter
+pnpm format         # Format code
+
+# Package management
+pnpm add [package]
+pnpm add -D [dev-package]
+pnpm update
+```
+
+Configure post-hook with: `FORMAT_COMMAND="pnpm format"`
+
+## TypeScript Configuration
+
+### Strict Mode
+```json
+{
+  "compilerOptions": {
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true
+  }
+}
+```
+
+### Type Safety Best Practices
+```typescript
+// Use unknown instead of any
+function processData(data: unknown): Result {
+  if (!isValidData(data)) {
+    throw new Error('Invalid data');
+  }
+  return processValidData(data);
+}
+
+// Discriminated unions for error handling
+type Result<T> = 
+  | { success: true; data: T }
+  | { success: false; error: string };
+
+// Const assertions for literals
+const ROLES = ['admin', 'user', 'guest'] as const;
+type Role = typeof ROLES[number];
+```
+
+## Code Organization
+
+### Module Structure
+```typescript
+// user.service.ts
+export class UserService {
+  constructor(private readonly db: Database) {}
+  
+  async findById(id: string): Promise<User | null> {
+    return this.db.users.findUnique({ where: { id } });
+  }
+}
+
+// user.controller.ts
+export class UserController {
+  constructor(private readonly userService: UserService) {}
+  
+  async getUser(req: Request, res: Response) {
+    const user = await this.userService.findById(req.params.id);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    res.json(user);
+  }
+}
+```
+
+### Error Handling
+```typescript
+// Custom error classes
+export class AppError extends Error {
+  constructor(
+    message: string,
+    public statusCode: number = 500,
+    public code?: string
+  ) {
+    super(message);
+    this.name = 'AppError';
+  }
+}
+
+// Global error handler
+export const errorHandler = (
+  err: Error,
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  if (err instanceof AppError) {
+    return res.status(err.statusCode).json({
+      error: err.message,
+      code: err.code
+    });
+  }
+  
+  console.error(err);
+  res.status(500).json({ error: 'Internal server error' });
+};
+```
+
+## Testing Strategy
+
+### Test Structure
+```typescript
+// user.service.test.ts
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+
+describe('UserService', () => {
+  let service: UserService;
+  let mockDb: MockDatabase;
+  
+  beforeEach(() => {
+    mockDb = createMockDatabase();
+    service = new UserService(mockDb);
+  });
+  
+  describe('findById', () => {
+    it('should return user when found', async () => {
+      const mockUser = { id: '1', name: 'Test User' };
+      mockDb.users.findUnique.mockResolvedValue(mockUser);
+      
+      const result = await service.findById('1');
+      
+      expect(result).toEqual(mockUser);
+      expect(mockDb.users.findUnique).toHaveBeenCalledWith({
+        where: { id: '1' }
+      });
+    });
+    
+    it('should return null when user not found', async () => {
+      mockDb.users.findUnique.mockResolvedValue(null);
+      
+      const result = await service.findById('999');
+      
+      expect(result).toBeNull();
+    });
+  });
+});
+```
+
+### Testing Best Practices
+- Test behavior, not implementation
+- Use descriptive test names
+- Follow AAA pattern (Arrange, Act, Assert)
+- Mock external dependencies
+- Test edge cases and error paths
+
+## API Design
+
+### RESTful Routes
+```typescript
+// Express example
+router.get('/users', asyncHandler(controller.listUsers));
+router.get('/users/:id', asyncHandler(controller.getUser));
+router.post('/users', validateBody(createUserSchema), asyncHandler(controller.createUser));
+router.put('/users/:id', validateBody(updateUserSchema), asyncHandler(controller.updateUser));
+router.delete('/users/:id', asyncHandler(controller.deleteUser));
+```
+
+### Input Validation
+```typescript
+// Using Zod for validation
+import { z } from 'zod';
+
+const createUserSchema = z.object({
+  name: z.string().min(1).max(100),
+  email: z.string().email(),
+  age: z.number().int().positive().optional()
+});
+
+type CreateUserInput = z.infer<typeof createUserSchema>;
+
+// Validation middleware
+export const validateBody = (schema: z.ZodSchema) => {
+  return (req: Request, res: Response, next: NextFunction) => {
+    const result = schema.safeParse(req.body);
+    if (!result.success) {
+      return res.status(400).json({
+        error: 'Validation failed',
+        details: result.error.flatten()
+      });
+    }
+    req.body = result.data;
+    next();
+  };
+};
+```
+
+## Async Patterns
+
+### Promise Best Practices
+```typescript
+// Use async/await over promises
+async function processItems(items: Item[]): Promise<Result[]> {
+  // Process in parallel when possible
+  const results = await Promise.all(
+    items.map(item => processItem(item))
+  );
+  return results;
+}
+
+// Handle errors properly
+async function fetchUserData(id: string): Promise<User> {
+  try {
+    const user = await db.users.findUnique({ where: { id } });
+    if (!user) {
+      throw new AppError('User not found', 404);
+    }
+    return user;
+  } catch (error) {
+    logger.error('Failed to fetch user', { id, error });
+    throw error;
+  }
+}
+```
+
+## Performance Optimization
+
+### Caching Strategy
+```typescript
+import { LRUCache } from 'lru-cache';
+
+const cache = new LRUCache<string, User>({
+  max: 500,
+  ttl: 1000 * 60 * 5 // 5 minutes
+});
+
+async function getCachedUser(id: string): Promise<User | null> {
+  const cached = cache.get(id);
+  if (cached) return cached;
+  
+  const user = await db.users.findUnique({ where: { id } });
+  if (user) {
+    cache.set(id, user);
+  }
+  return user;
+}
+```
+
+### Database Query Optimization
+- Use database indexes effectively
+- Implement pagination for lists
+- Use projections to fetch only needed fields
+- Batch database operations when possible
+
+## Security Best Practices
+
+### Input Sanitization
+- Always validate and sanitize user input
+- Use parameterized queries
+- Escape HTML in output
+- Implement rate limiting
+
+### Authentication & Authorization
+```typescript
+// JWT middleware example
+export const authenticate = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  const token = req.headers.authorization?.split(' ')[1];
+  if (!token) {
+    return res.status(401).json({ error: 'No token provided' });
+  }
+  
+  try {
+    const payload = jwt.verify(token, process.env.JWT_SECRET!);
+    req.user = payload;
+    next();
+  } catch (error) {
+    return res.status(401).json({ error: 'Invalid token' });
+  }
+};
+```
+
+## Environment Configuration
+
+### Environment Variables
+```bash
+# .env.example
+NODE_ENV=development
+PORT=3000
+DATABASE_URL=postgresql://user:pass@localhost:5432/db
+JWT_SECRET=your-secret-key
+LOG_LEVEL=debug
+```
+
+### Configuration Module
+```typescript
+import { z } from 'zod';
+
+const envSchema = z.object({
+  NODE_ENV: z.enum(['development', 'test', 'production']),
+  PORT: z.string().transform(Number),
+  DATABASE_URL: z.string().url(),
+  JWT_SECRET: z.string().min(32)
+});
+
+export const config = envSchema.parse(process.env);
+```
+
+## Additional Node.js-Specific Notes
+
+- Use pnpm workspaces for monorepos
+- Implement graceful shutdown
+- Use clustering for CPU-intensive tasks
+- Monitor memory usage and leaks
+- Keep dependencies up to date with `pnpm update`

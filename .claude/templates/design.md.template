@@ -1,0 +1,216 @@
+# Design: [Module Name]
+
+## Overview
+[Technical overview of the solution, linking back to requirements]
+
+## Architecture
+
+### High-Level Design
+[Describe the overall architecture and how this module fits into the system]
+
+```mermaid
+graph TD
+    A[Component A] --> B[Component B]
+    B --> C[Data Store]
+    B --> D[External Service]
+```
+
+### Design Decisions
+- [Decision 1]: [Rationale]
+- [Decision 2]: [Rationale]
+
+### Technology Choices
+- [Technology/Library]: [Why chosen]
+- [Technology/Library]: [Why chosen]
+
+## Components
+
+### Component 1: [Name]
+**Purpose**: [What this component does]
+
+**Responsibilities**:
+- [Responsibility 1]
+- [Responsibility 2]
+
+**Interface**:
+```[language]
+// Define the public interface
+interface ComponentInterface {
+    method1(param: Type): ReturnType;
+    method2(param: Type): ReturnType;
+}
+```
+
+### Component 2: [Name]
+**Purpose**: [What this component does]
+
+**Responsibilities**:
+- [Responsibility 1]
+- [Responsibility 2]
+
+## Data Models
+
+### Model 1: [Name]
+```[language]
+// Define the data structure
+class/type ModelName {
+    field1: Type;
+    field2: Type;
+    field3: Type;
+}
+```
+
+**Validations**:
+- field1: [Validation rules]
+- field2: [Validation rules]
+
+### Model 2: [Name]
+[Continue pattern...]
+
+## API Design (if applicable)
+
+### Endpoint 1: [Operation Name]
+- **Method**: GET/POST/PUT/DELETE
+- **Path**: `/api/v1/resource`
+- **Description**: [What this endpoint does]
+
+**Request**:
+```json
+{
+  "field1": "value",
+  "field2": "value"
+}
+```
+
+**Response**:
+```json
+{
+  "id": "123",
+  "field1": "value",
+  "field2": "value",
+  "createdAt": "2024-01-01T00:00:00Z"
+}
+```
+
+**Error Responses**:
+- `400 Bad Request`: [When this occurs]
+- `404 Not Found`: [When this occurs]
+- `500 Internal Server Error`: [When this occurs]
+
+## Business Logic
+
+### Process 1: [Name]
+```[language]
+// Pseudocode or high-level implementation
+function processName(input: InputType): OutputType {
+    // Step 1: Validate input
+    // Step 2: Transform data
+    // Step 3: Apply business rules
+    // Step 4: Return result
+}
+```
+
+### Process 2: [Name]
+[Continue pattern...]
+
+## Error Handling
+
+### Error Strategy
+- [How errors are captured and handled]
+- [Error reporting approach]
+- [User-facing error messages]
+
+### Error Types
+```[language]
+// Define custom error types
+class ValidationError extends Error {
+    constructor(field: string, message: string);
+}
+
+class BusinessRuleError extends Error {
+    constructor(rule: string, message: string);
+}
+```
+
+## Security Considerations
+
+### Authentication
+- [How users are authenticated]
+- [Token/session management]
+
+### Authorization  
+- [How permissions are checked]
+- [Role/permission model]
+
+### Data Security
+- [Sensitive data handling]
+- [Encryption requirements]
+
+## Testing Strategy
+
+### Unit Tests
+- [What will be unit tested]
+- [Mocking strategy]
+- [Coverage targets]
+
+### Integration Tests
+- [Integration points to test]
+- [Test data management]
+
+### Performance Tests
+- [Performance scenarios to test]
+- [Load testing approach]
+
+## Performance Considerations
+
+### Expected Load
+- [Concurrent users]
+- [Requests per second]
+- [Data volume]
+
+### Optimization Strategies
+- [Caching approach]
+- [Query optimization]
+- [Resource pooling]
+
+## Database Design (if applicable)
+
+### Schema Changes
+```sql
+-- SQL for new tables/changes
+CREATE TABLE table_name (
+    id PRIMARY KEY,
+    field1 VARCHAR(255),
+    field2 INTEGER,
+    created_at TIMESTAMP
+);
+```
+
+### Indexes
+- [Index 1]: [Purpose]
+- [Index 2]: [Purpose]
+
+## Migration Plan (if applicable)
+
+### Data Migration
+- [Steps to migrate existing data]
+- [Rollback strategy]
+
+### Backward Compatibility
+- [How compatibility is maintained]
+- [Deprecation timeline]
+
+## Monitoring & Observability
+
+### Metrics
+- [Key metrics to track]
+- [Alerting thresholds]
+
+### Logging
+- [What to log]
+- [Log levels and retention]
+
+## Future Considerations
+- [Known limitations]
+- [Potential improvements]
+- [Scalability considerations]
