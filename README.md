@@ -20,27 +20,29 @@ Ultraspec is a comprehensive template for implementing spec-driven development w
 
 ## Quick Start
 
-### Option 1: Quick Install (Recommended)
+### Option 1: One-Line Install (With Parameters)
 
-#### Super Quick (2 prompts)
 ```bash
-curl -fsSL https://raw.githubusercontent.com/aiconsultancy/ultraspec/main/quick-install.sh | bash
+# Install with all parameters specified
+curl -fsSL https://raw.githubusercontent.com/aiconsultancy/ultraspec/main/install.sh | \
+  bash -s -- --name "MyApp" --stack node-pnpm --path ./myapp
 ```
 
-#### With Options
+Available stacks: `node-pnpm`, `dotnet`, `golang`, `bun`, `multi-stack`
+
+### Option 2: Interactive Install (Download First)
+
 ```bash
-curl -fsSL https://raw.githubusercontent.com/aiconsultancy/ultraspec/main/install.sh | bash -s -- \
-  --name "My App" \
-  --stack node-pnpm \
-  --path ~/projects/myapp
+# Download and run the quick installer
+curl -fsSL https://raw.githubusercontent.com/aiconsultancy/ultraspec/main/quick-install.sh \
+  -o quick-install.sh && bash quick-install.sh
+
+# Or download the full installer for more options
+curl -fsSL https://raw.githubusercontent.com/aiconsultancy/ultraspec/main/install.sh \
+  -o install.sh && bash install.sh
 ```
 
-#### Interactive
-```bash
-curl -fsSL https://raw.githubusercontent.com/aiconsultancy/ultraspec/main/install.sh | bash
-```
-
-### Option 2: Manual Installation
+### Option 3: Manual Installation
 
 ```bash
 # Clone ultraspec
@@ -49,6 +51,8 @@ git clone https://github.com/aiconsultancy/ultraspec.git
 # Initialize a new project
 ./ultraspec/init-ultraspec.sh ~/projects/myapp --stack node-pnpm --name "My App"
 ```
+
+**Note:** The installers require either all parameters to be provided (Option 1) or interactive terminal access (Option 2). Piping to bash without parameters won't work due to the need for user input.
 
 ### After Installation
 

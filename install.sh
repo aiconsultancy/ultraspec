@@ -149,8 +149,27 @@ download_ultraspec() {
     print_success "Downloaded ultraspec"
 }
 
+# Check if running interactively
+is_interactive() {
+    # Check if stdin is a terminal
+    [ -t 0 ]
+}
+
 # Interactive setup
 interactive_setup() {
+    # Check if we can run interactively
+    if ! is_interactive; then
+        print_error "This script requires interactive input when run without parameters."
+        print_info "Please either:"
+        print_info "  1. Download and run locally: "
+        print_info "     curl -fsSL https://raw.githubusercontent.com/aiconsultancy/ultraspec/main/install.sh -o install.sh"
+        print_info "     bash install.sh"
+        print_info ""
+        print_info "  2. Or provide all parameters:"
+        print_info "     curl -fsSL ... | bash -s -- --name 'MyApp' --stack node-pnpm --path ./myapp"
+        exit 1
+    fi
+    
     # Get project path if not provided
     if [ -z "$PROJECT_PATH" ]; then
         read -p "Enter project path (default: current directory): " input_path
@@ -218,21 +237,32 @@ main() {
     # Check requirements
     check_requirements
     
-    # Interactive setup if needed
-    interactive_setup
+    # Interactive setup if needed (or validate parameters)
+    if [ -z "$PROJECT_NAME" ] || [ -z "$STACK" ]; then
+        interactive_setup
+    fi
     
-    # Confirm settings
-    echo ""
-    print_info "Project settings:"
-    echo "  Path: $PROJECT_PATH"
-    echo "  Name: $PROJECT_NAME"
-    echo "  Stack: $STACK"
-    echo ""
-    read -p "Continue with these settings? [Y/n] " confirm
+    # Set default path if not provided
+    if [ -z "$PROJECT_PATH" ]; then
+        PROJECT_PATH="$(pwd)"
+    fi
     
-    if [[ "$confirm" =~ ^[Nn] ]]; then
-        print_info "Setup cancelled"
-        exit 0
+    # Confirm settings only if interactive
+    if is_interactive; then
+        echo ""
+        print_info "Project settings:"
+        echo "  Path: $PROJECT_PATH"
+        echo "  Name: $PROJECT_NAME"
+        echo "  Stack: $STACK"
+        echo ""
+        read -p "Continue with these settings? [Y/n] " confirm
+        
+        if [[ "$confirm" =~ ^[Nn] ]]; then
+            print_info "Setup cancelled"
+            exit 0
+        fi
+    else
+        print_info "Installing with: path=$PROJECT_PATH, name=$PROJECT_NAME, stack=$STACK"
     fi
     
     # Download and run
